@@ -111,6 +111,8 @@ def main(alarm_default=False) -> int:
         help='HSSC only: collect with a separately labelled cohort age estimate; never creates a DOB or sports eligibility')
     collect_parser.add_argument('--estimated-age-at-exam', type=int, default=18)
     collect_parser.add_argument('--save-student-photos', action='store_true', help='Save original imgDisplay photos in SQLite before deleting captures')
+    collect_parser.add_argument('--photo-storage',choices=('sqlite','files'),default='sqlite')
+    collect_parser.add_argument('--photo-root',type=Path,help='Persistent media root for file photo storage')
     photos_parser = commands.add_parser('photos', help='Export original SQLite student photos with an exact applicant mapping')
     photos_parser.add_argument('--database',type=Path,required=True)
     photos_parser.add_argument('--output',type=Path,required=True)
@@ -145,6 +147,8 @@ def _execute(args):
             print(json.dumps(result,indent=2))
             return 0
         if args.command == "collect":
+            if args.photo_storage=='files' and (not args.save_student_photos or args.photo_root is None):
+                raise ValueError('File storage requires --save-student-photos and --photo-root')
             if not 1 <= args.estimated_age_at_exam <= 100 or (args.missing_dob_policy == 'estimate' and args.grade != 12):
                 raise ValueError('Estimated missing-DOB collection requires class 12 and a valid cohort age')
             if args.limit < 0 or args.interval < 3:

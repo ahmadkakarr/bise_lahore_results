@@ -193,7 +193,13 @@ def panel(value, rate=None):
     workers=Table('Worker','Job','Tehsil','Activity',expand=True)
     for number,event in sorted(value.get('worker_activity',{}).items(),key=lambda x:int(x[0])):
         workers.add_row(number,str(event.get('job','')),event.get('group',''),event.get('phase',event.get('state','waiting')))
-    parts=[Panel(Group(Text(status_text),progress),title='Inter 2024 • '+('Universities registration '+value.get('mode','') if registration else 'Server collector'),border_style='cyan'),workers]
+    parts=[Panel(Group(Text(status_text),progress),title=value.get('title','Inter 2024 • '+('Universities registration '+value.get('mode','') if registration else 'Server collector')),border_style='cyan'),workers]
+    if value.get('pipeline'):
+        parts.append(Text('Pipeline: '+ ' · '.join(f'{key}: {number:,}' for key,number in value['pipeline'].items() if isinstance(number,int))))
+    if 'photos_saved' in value:
+        pending_photos=sum(n for k,n in value.get('photo_states',{}).items() if k in ('pending','retry','running'))
+        parts.append(Text(f"Original photo files: {value['photos_saved']:,} · recovery backlog: {pending_photos:,} · backfill: {value.get('photo_recovery',{}).get('status','starting')} · registration off"))
+        parts.append(Text('Central inbox acknowledgements: '+str(sum(value.get('central_receipts',{}).values()))+' · '+str(value.get('central_receipts',{}))))
     if registration:
         groups=Table('Tehsil','Registered','External duplicate','Pending','Needs attention',expand=True)
         for group,states in value.get('groups',{}).items():
@@ -243,7 +249,8 @@ def stop(config):
 def download(config):
     """Bounded-memory, resumable download of one pinned online snapshot."""
     from . import snapshots
-    output=pilot.ROOT/'remote_downloads/Inter 2024 - Part-II Annual'
+    output=pilot.ROOT/config.get('download_folder','remote_downloads/Inter 2024 - Part-II Annual')
+    remote_root=config.get('root',JOB_ROOT)
     output.mkdir(parents=True,exist_ok=True,mode=0o700)
     pending=output/'pending-snapshot.json'
     prefix=[config['release']+'/.venv/bin/python','-c']
@@ -252,19 +259,24 @@ def download(config):
                 'cd '+shlex.quote(config['release'])+' && '+shlex.join([*prefix,code])]
     if pending.exists():item=json.loads(pending.read_text())
     else:
-        code='from bise_remote.snapshots import create;import json;print(json.dumps(create('+repr(JOB_ROOT)+')))'
+        module='bundle' if config.get('photo_storage')=='files' else 'snapshots'
+        code='from bise_remote.'+module+' import create;import json;print(json.dumps(create('+repr(remote_root)+')))'
         item=json.loads(pilot.ssh(config['ssh_host'],guest_python(code),timeout=300))
         atomic(pending,item)
     compressed=output/item['filename'];partial=compressed.with_suffix(compressed.suffix+'.part')
     offset=partial.stat().st_size if partial.exists() else 0
-    code='from bise_remote.snapshots import stream;import sys;stream('+repr(JOB_ROOT)+','+repr(item['id'])+','+str(offset)+',sys.stdout.buffer)'
+    code='from bise_remote.snapshots import stream;import sys;stream('+repr(remote_root)+','+repr(item['id'])+','+str(offset)+',sys.stdout.buffer)'
     cmd=guest_python(code)
     with partial.open('ab') as stream:
         result=subprocess.run(['ssh',*pilot.HOST_OPTIONS,config['ssh_host'],shlex.join(cmd)],stdout=stream)
     if result.returncode:raise RuntimeError('Download interrupted; rerun download to resume this snapshot')
     partial.replace(compressed)
-    snapshots.restore(compressed,output/'results.sqlite3',item)
+    if item.get('format')=='file_photo_bundle':
+        from .bundle import restore
+        restored=restore(compressed,output,item)
+    else:
+        snapshots.restore(compressed,output/'results.sqlite3',item);restored=output/'results.sqlite3'
     atomic(output/'Snapshot.json',item);pending.unlink()
-    code='from bise_remote.snapshots import release;release('+repr(JOB_ROOT)+','+repr(item['id'])+')'
+    code='from bise_remote.snapshots import release;release('+repr(remote_root)+','+repr(item['id'])+')'
     pilot.ssh(config['ssh_host'],guest_python(code))
-    print('Downloaded and verified: '+str(output/'results.sqlite3'))
+    print('Downloaded and verified: '+str(restored))

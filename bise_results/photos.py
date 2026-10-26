@@ -56,7 +56,7 @@ async def download_photo(page, source):
         await response.dispose()
 
 
-def save_photo(db, job_id, parsed, folder):
+def save_photo(db, job_id, parsed, folder, storage='sqlite', media_root=None):
     metadata = parsed.get('student_photo')
     if not metadata:
         return
@@ -64,6 +64,11 @@ def save_photo(db, job_id, parsed, folder):
     actual = inspect_photo(payload)
     if any(metadata.get(k) != v for k, v in actual.items()):
         raise ValueError('Student photo checksum or image metadata differs from capture')
+    if storage=='files':
+        if media_root is None:raise ValueError('File photo storage needs a media root')
+        from .media import save_file
+        return save_file(db,job_id,parsed,payload,media_root)
+    if storage!='sqlite':raise ValueError('Unknown photo storage')
     db.execute('''INSERT INTO student_photos(job_id,sha256,mime_type,width,height,source_url,payload)
         VALUES(?,?,?,?,?,?,?) ON CONFLICT(job_id) DO UPDATE SET sha256=excluded.sha256,
         mime_type=excluded.mime_type,width=excluded.width,height=excluded.height,

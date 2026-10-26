@@ -37,6 +37,8 @@
     "max_bytes": 262144,
     "individual_overrides": null,
     "site_acceptance_verified": false,
+    "source_media_root": null,
+    "source_exam": null,
     "source_database": null,
     "source_sha256": null
   },

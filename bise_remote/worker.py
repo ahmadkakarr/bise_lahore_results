@@ -36,6 +36,7 @@ def collector_command(root,c,workers,limit):
         '--missing-dob-policy',c.get('missing_dob_policy','require'),
         '--estimated-age-at-exam',str(c.get('estimated_age_at_exam',18))]
     if c.get('save_student_photos'):command.append('--save-student-photos')
+    if c.get('photo_storage')=='files':command+=['--photo-storage','files','--photo-root',str(root/'photos')]
     if c.get('browser_executable'):command+=['--browser-executable',c['browser_executable']]
     return command
 
@@ -74,6 +75,16 @@ def sweep(root):
             if row and row['state']=='verified':
                 try:discard_verified_capture(db,int(folder.name[4:]),folder)
                 except (OSError,ValueError):pass
+
+
+def recovery_wait(seconds,publish,stopped,*,sleep=time.sleep,clock=time.monotonic):
+    """Recovery remains observable and intentional stop stays responsive."""
+    until=clock()+seconds;next_heartbeat=0
+    while not stopped() and clock()<until:
+        if clock()>=next_heartbeat:
+            publish('recovering',reason='collector_exit',retry_in_seconds=max(0,int(until-clock())))
+            next_heartbeat=clock()+5
+        sleep(min(1,max(0,until-clock())))
 
 
 def run(root):
@@ -151,6 +162,7 @@ def run(root):
                         if event.get('reason') in ('evidence_quota','low_disk_space'):reason=event['reason']
                         if event.get('state')=='verified':state['last_saved_at']=now()
                     except ValueError:pass
+                    if line.startswith('Error:'):state['last_error']=line.strip()[6:].strip()[:1000]
                 if time.monotonic()-last_heartbeat>5:
                     summary=publish('running',pid=child.pid,free_disk_bytes=shutil.disk_usage(root).free)
                     saved=summary.get('verified',0)
@@ -180,9 +192,7 @@ def run(root):
                 publish('recovering',reason=reason);continue
             if code not in (0,2):
                 failures+=1;publish('recovering',reason='collector_exit',retry_in_seconds=min(300,30*failures))
-                for _ in range(min(300,30*failures)):
-                    if stopped:break
-                    time.sleep(1)
+                recovery_wait(min(300,30*failures),publish,lambda:stopped)
                 continue
             if request['limit']:
                 publish('pilot_complete' if code==0 else 'pilot_complete_with_issues');return 0

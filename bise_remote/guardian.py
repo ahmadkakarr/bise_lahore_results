@@ -17,25 +17,27 @@ def command(argv):
     return subprocess.check_output(argv,timeout=12,text=True)
 
 
-def owns_guest(text):
+def owns_guest(text,marker='bise-results:inter-2024-pilot',hostname='bise-inter-2024-pilot'):
     config=dict(line.split(':',1) for line in text.splitlines() if ':' in line and not line.startswith('#'))
     # pmxcfs stores the description as URI-encoded leading comments, whereas
     # the Proxmox API exposes a decoded "description" property.
     description=config.get('description') or '\n'.join(line[1:] for line in text.splitlines() if line.startswith('#'))
-    return (unquote(description).strip()=='bise-results:inter-2024-pilot'
-            and config.get('hostname','').strip()=='bise-inter-2024-pilot'
+    return (unquote(description).strip()==marker
+            and config.get('hostname','').strip()==hostname
             and config.get('unprivileged','').strip()=='1')
 
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--vmid',type=int,required=True)
-    parser.add_argument('--root',required=True);args=parser.parse_args()
+    parser.add_argument('--root',required=True)
+    parser.add_argument('--marker',default='bise-results:inter-2024-pilot')
+    parser.add_argument('--hostname',default='bise-inter-2024-pilot');args=parser.parse_args()
     root=Path(args.root)
-    if not root.is_absolute() or '..' in root.parts or not root.is_relative_to('/var/lib/bise-results/jobs'):
+    if not root.is_absolute() or '..' in root.parts or not any(root.is_relative_to(p) for p in ('/var/lib/bise-results/jobs','/var/lib/bise-results/workflows')):
         raise ValueError('Invalid collector job root')
     # Read the local pmxcfs ownership marker; don't spawn the large Perl API
     # client just to inspect a small config file on this same host.
-    if not owns_guest(Path(f'/etc/pve/lxc/{args.vmid}.conf').read_text()):
+    if not owns_guest(Path(f'/etc/pve/lxc/{args.vmid}.conf').read_text(),args.marker,args.hostname):
         raise ValueError('Guardian refuses an unrelated guest')
     health={'observed_at':time.time(),'safe':False}
     try:

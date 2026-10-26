@@ -44,8 +44,8 @@ def load(path):
     path = Path(path).resolve()
     c = json.loads(path.read_text())
     safe_id(c['job'])
-    if c.get('schema_version') != 1 or c.get('class') != 12 or c.get('year') != 2024:
-        raise ValueError('This remote profile requires HSSC Part-II Annual 2024')
+    if c.get('schema_version') != 1 or (c.get('class'),c.get('year')) not in ((12,2024),(9,2026)):
+        raise ValueError('Remote profile supports HSSC Part-II 2024 or SSC Part-I 2026')
     if not 1 <= c['workers'] <= 18 or not 1 <= c['ocr_workers'] <= 8:
         raise ValueError('Invalid worker limits')
     if c['interval_seconds'] < 3 or c['disk_pause_gib'] < 4 or c['disk_resume_gib'] <= c['disk_pause_gib']:
@@ -53,12 +53,13 @@ def load(path):
     if c.get('missing_dob_policy','require') not in ('require','estimate'):
         raise ValueError('Invalid DOB collection policy')
     if c.get('missing_dob_policy') == 'estimate':
-        if (type(c.get('estimated_age_at_exam')) is not int or not 1 <= c['estimated_age_at_exam'] <= 100
+        if (c['class']!=12 or type(c.get('estimated_age_at_exam')) is not int or not 1 <= c['estimated_age_at_exam'] <= 100
                 or c.get('sports_registration_requires_verified_dob') is not True):
             raise ValueError('Estimated age requires an explicit assumption and verified-DOB registration gate')
     if not c['ssh_host'] or c['ssh_host'].startswith('-') or any(x.isspace() for x in c['ssh_host']):
         raise ValueError('Invalid SSH host alias')
-    for key in ('input', 'infrastructure_root'):
+    for key in ('input', 'infrastructure_root','seed_database','normalization_profile'):
+        if key not in c:continue
         c[key] = str((path.parent / c[key]).resolve())
     c['profile_path'] = str(path)
     return c

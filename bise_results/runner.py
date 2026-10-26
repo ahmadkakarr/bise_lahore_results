@@ -147,10 +147,13 @@ async def lookup(page, job, folder, args, pacer, operator_lock, progress=None):
         progress('saving_student_photo')
         try:
             payload, parsed['student_photo'] = await download_photo(page, await page.content())
-        except ValueError as exc:
-            raise ReviewRequired(str(exc)) from exc
-        photo_name = 'student-photo.' + parsed['student_photo']['extension']
-        atomic_write(folder / photo_name, payload)
+        except (ValueError, BrowserError) as exc:
+            if getattr(args,'photo_storage','sqlite')!='files':raise ReviewRequired(str(exc)) from exc
+            parsed['student_photo_status']='missing'
+            parsed['student_photo_error']=str(exc)
+        if parsed.get('student_photo'):
+            photo_name = 'student-photo.' + parsed['student_photo']['extension']
+            atomic_write(folder / photo_name, payload)
     parsed["source_url"] = page.url
     parsed["fetched_at"] = now()
     atomic_write(folder / "parsed.json", json.dumps(parsed, indent=2, ensure_ascii=False))
@@ -245,7 +248,12 @@ async def collect(args):
                             # Photo + identity commit atomically before cleanup may discard captures.
                             from .photos import save_photo
                             with db:
-                                save_photo(db,job['id'],parsed,folder)
+                                save_photo(db,job['id'],parsed,folder,
+                                    getattr(args,'photo_storage','sqlite'),getattr(args,'photo_root',None))
+                                if getattr(args,'photo_storage','sqlite')=='files':
+                                    atomic_write(folder/'parsed.json',json.dumps(parsed,indent=2,ensure_ascii=False))
+                                    receipt['parsed.json']['sha256']=hashlib.sha256((folder/'parsed.json').read_bytes()).hexdigest()
+                                    atomic_write(folder/'receipt.json',json.dumps(receipt,indent=2))
                                 db.execute("UPDATE attempts SET ended_at=?,outcome='verified',detail=NULL WHERE id=?",(now(),attempt_id))
                                 db.execute("UPDATE jobs SET state='verified',result_json=?,receipt_json=?,error=NULL,updated_at=? WHERE id=?",(json.dumps(parsed),json.dumps(receipt),now(),job['id']))
                             state = "verified"

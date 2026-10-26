@@ -65,10 +65,14 @@ def load(path):
     validate_browser(browser)
     if type(config['state']['write_reports']) is not bool:
         raise ValueError('state.write_reports must be boolean')
-    from .photos import original
-    if config['photos']['mode'] not in ('operator_selected_shared_graphic','original_sqlite_reference') or config['photos']['individual_overrides'] is not None:
+    from .photos import original,files
+    if config['photos']['mode'] not in ('operator_selected_shared_graphic','original_sqlite_reference','original_file_reference') or config['photos']['individual_overrides'] is not None:
         raise ValueError('Unsupported photo provider')
-    if original(config) and (not config['photos'].get('source_database') or not config['photos'].get('source_sha256') or config['photos']['shared_file'] is not None):
+    if files(config):
+        if (not config['photos'].get('source_media_root') or config['photos'].get('source_exam')!={'year':2026,'course':'SSC','exam_type':'1'} or config['photos']['shared_file'] is not None):
+            raise ValueError('File photos require a trusted media root and the explicit SSC 2026 Part-I scope')
+        if not Path(config['photos']['source_media_root']).is_absolute():raise ValueError('Media root must be absolute')
+    elif original(config) and (not config['photos'].get('source_database') or not config['photos'].get('source_sha256') or config['photos']['shared_file'] is not None):
         raise ValueError('Original-photo mode requires a pinned source DB and no shared fallback')
     pattern=config['selection'].get('dispatch_pattern',[])
     if pattern and (pattern!=['Raiwind','Model Town'] or not config['selection'].get('dispatch_key')):
@@ -92,7 +96,7 @@ def load(path):
     db = resolved(path, config['state']['database'])
     output = resolved(path, config['state']['output'])
     inputs = [path] + [resolved(path, config['input'][k]) for k in ('csv', 'manifest', 'provenance')]
-    inputs += [resolved(path,config['photos']['source_database'] if original(config) else config['photos']['shared_file'])]
+    inputs += [resolved(path,config['photos']['source_media_root'] if files(config) else config['photos']['source_database'] if original(config) else config['photos']['shared_file'])]
     if any(p == db or p.is_relative_to(output) for p in inputs) or db.is_relative_to(output):
         raise ValueError('Registration output/state must be separate from inputs')
     return config
@@ -101,11 +105,13 @@ def load(path):
 @contextmanager
 def input_snapshot(config, profile_path, allow_empty=False):
     paths = {k: resolved(profile_path, config['input'][k]) for k in ('csv', 'manifest', 'provenance')}
-    from .photos import original
+    from .photos import original,files
     if not original(config):paths['photo'] = resolved(profile_path, config['photos']['shared_file'])
     with ExitStack() as locks,snapshots(paths) as copies:
         hashes = {k: v[1] for k, v in copies.items()}
-        if original(config):
+        if files(config):
+            hashes['photo']=config['photos']['expected_sha256']
+        elif original(config):
             source=resolved(profile_path,config['photos']['source_database'])
             lock=locks.enter_context(source.with_suffix('.lock').open('rb'))
             fcntl.flock(lock,fcntl.LOCK_SH|fcntl.LOCK_NB)

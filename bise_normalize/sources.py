@@ -80,7 +80,8 @@ def sqlite_table(path, settings):
         rows = db.execute("SELECT roll,result_json FROM jobs WHERE year=? AND course=? AND exam_type=? AND state='verified'" + extra + ' ORDER BY roll',
                           scope + ((allocation,) if allocation else ()))
         fields = ['Division','District','Tehsil','UC','Sport','Administrative Allocation','Sport Allocation'] if allocation else []
-        yield None, [LABELS[key] for key in RESULT_COLUMNS] + fields
+        external_photos=bool(db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='photo_assets'").fetchone())
+        yield None, [LABELS[key] for key in RESULT_COLUMNS] + fields + (['Photo Reference'] if external_photos else [])
         for number, row in enumerate(rows, 2):
             record = json.loads(row['result_json'])
             if record.get('roll') != row['roll']:
@@ -90,6 +91,12 @@ def sqlite_table(path, settings):
             record['state'] = 'verified'
             # No generated Result Cards folder is required for DB normalization.
             output = {LABELS[key]: text(display(record, key)) if key != 'result_card' else '' for key in RESULT_COLUMNS}
+            if external_photos:
+                output['Photo Reference']=''
+                if record.get('student_photo',{}).get('storage')=='files':
+                    from bise_results.media import reference
+                    job=db.execute('SELECT * FROM jobs WHERE roll=? AND year=? AND course=? AND exam_type=?',(row['roll'],*scope)).fetchone()
+                    output['Photo Reference']=json.dumps(reference(db,job),sort_keys=True)
             if allocation:
                 metadata = record.get('administrative_allocation', {})
                 if metadata.get('scheme') != allocation or metadata.get('residence_inferred') is not False:

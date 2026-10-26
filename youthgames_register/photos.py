@@ -9,7 +9,8 @@ import sqlite3
 from bise_results.photos import inspect_photo
 
 
-def original(config):return config.get('photos',{}).get('mode')=='original_sqlite_reference'
+def files(config):return config.get('photos',{}).get('mode')=='original_file_reference'
+def original(config):return config.get('photos',{}).get('mode') in ('original_sqlite_reference','original_file_reference')
 
 
 def applicant_photo(config,origin,shared_path=None,shared_hash=None):
@@ -18,12 +19,20 @@ def applicant_photo(config,origin,shared_path=None,shared_hash=None):
     ref=dict(origin['photo_reference'])
     if ref['applicant_key']!=origin['data']['BForm'] or ref['roll']!=origin['roll']:
         raise ValueError('Original photo reference belongs to another applicant')
+    if files(config):
+        if ref.get('kind')!='original_file_reference' or any(str(ref.get(k))!=str(v) for k,v in config['photos']['source_exam'].items()):
+            raise ValueError('Original photo belongs to another exam')
+        return {**ref,'source_media_root':config['photos']['source_media_root']}
     if ref['source_database']!=config['photos']['source_database'] or ref['source_sha256']!=config['photos']['source_sha256']:
         raise ValueError('Original photo reference belongs to a different source')
     return {**ref,'kind':'original_sqlite_reference'}
 
 
 def matches_profile(config,photo):
+    if files(config):
+        return (photo.get('kind')=='original_file_reference'
+            and photo.get('source_media_root')==config['photos']['source_media_root']
+            and all(str(photo.get(k))==str(v) for k,v in config['photos']['source_exam'].items()))
     if original(config):
         return (photo.get('kind')=='original_sqlite_reference'
                 and photo.get('source_database')==config['photos']['source_database']
@@ -33,6 +42,13 @@ def matches_profile(config,photo):
 
 def payload(photo,expected_hash):
     if not isinstance(photo,dict):return Path(photo).read_bytes()
+    if photo.get('kind')=='original_file_reference':
+        from bise_results.media import checked_path
+        data=checked_path(photo['source_media_root'],photo['relative_path']).read_bytes()
+        if photo['sha256']!=expected_hash or hashlib.sha256(data).hexdigest()!=expected_hash or len(data)!=photo['bytes']:
+            raise ValueError('Original file photo checksum differs')
+        inspect_photo(data)
+        return data
     if photo.get('kind')!='original_sqlite_reference':return Path(photo['path']).read_bytes()
     path=Path(photo['source_database']).resolve()
     with closing(sqlite3.connect(path.as_uri()+'?mode=ro&immutable=1',uri=True)) as db:

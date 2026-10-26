@@ -16,6 +16,24 @@ def main():
     parser.add_argument('--json',action='store_true')
     args=parser.parse_args()
     if args.interval<2:parser.error('--interval must be at least 2 seconds')
+    profile=load(args.profile)
+    if profile['class']==9:
+        from . import ssc
+        if args.job=='registration':parser.error('SSC registration is consumed by the central ledger; this profile collects and normalizes only')
+        if args.action=='prepare':
+            config=ssc.prepare(profile);print(json.dumps({'status':'prepared','vmid':config['vmid'],'root':config['root']}));return
+        if args.action=='start':ssc.start(profile);return
+        if args.action=='pilot':ssc.acceptance(ssc.deployment(profile));return
+        config=ssc.deployment(profile)
+        if args.action=='watch':control.watch(config,args.interval,ssc.status)
+        elif args.action=='status':
+            value=ssc.status(config)
+            if args.json:print(json.dumps(value,indent=2))
+            else:
+                from rich.console import Console
+                Console().print(control.panel(value))
+        else:getattr(ssc,args.action)(config)
+        return
     active=control.STATE/'active-task.json'
     job=args.job or (json.loads(active.read_text())['job'] if active.exists() else 'collection')
     if job=='registration':
@@ -35,7 +53,7 @@ def main():
         return
     if args.action in ('prepare','pilot'):parser.error('Use --job registration for prepare/pilot')
     if args.action=='start':
-        control.start(load(args.profile));return
+        control.start(profile);return
     config=control.deployment()
     if args.action=='watch':control.watch(config,args.interval)
     elif args.action=='status':

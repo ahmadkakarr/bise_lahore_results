@@ -27,7 +27,7 @@ def locked_store(path):
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             raise RuntimeError("Another collector/import/export owns this database; wait for it to finish") from exc
-        db = sqlite3.connect(path)
+        db = sqlite3.connect(path,timeout=30)
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA foreign_keys=ON")
         db.execute("PRAGMA journal_mode=WAL")
@@ -56,12 +56,15 @@ def locked_store(path):
             mime_type TEXT NOT NULL, width INTEGER NOT NULL, height INTEGER NOT NULL,
             source_url TEXT NOT NULL, payload BLOB NOT NULL);
         """)
+        from .media import SCHEMA
+        db.executescript(SCHEMA)
         # Preserve existing Part-II batch IDs/jobs while adding exam-scoped batches.
         columns = {row['name'] for row in db.execute('PRAGMA table_info(batches)')}
         for name, default in [('course', 'SSC'), ('exam_type', '2')]:
             if name not in columns:
                 db.execute(f"ALTER TABLE batches ADD COLUMN {name} TEXT NOT NULL DEFAULT '{default}'")
         db.execute('CREATE INDEX IF NOT EXISTS jobs_exam_state ON jobs(year,course,exam_type,state)')
+        db.execute('CREATE INDEX IF NOT EXISTS members_source_order ON members(batch_id,source_row,job_id)')
         db.commit()
         try:
             yield db
@@ -80,6 +83,10 @@ def import_batch(db, source, school, year=2026, exam_type='2', course='SSC'):
         raise ValueError(f"Input needs correction: {report}")
     identity = json.dumps([school, year, course, exam_type, report["sha256"]])
     batch_id = hashlib.sha256(identity.encode()).hexdigest()[:16]
+    existing=db.execute('SELECT source_rows FROM batches WHERE id=?',(batch_id,)).fetchone()
+    if existing and existing['source_rows']==report['valid_records']:
+        members=db.execute('SELECT count(*) FROM members WHERE batch_id=?',(batch_id,)).fetchone()[0]
+        if members==report['unique_rolls']:return batch_id
     with Path(source).open(encoding="utf-8-sig", newline="") as stream:
         rows = list(csv.DictReader(stream))
     with db:
@@ -96,6 +103,19 @@ def import_batch(db, source, school, year=2026, exam_type='2', course='SSC'):
 
 def jobs_for(db, batch):
     return db.execute("SELECT j.* FROM members m JOIN jobs j ON j.id=m.job_id WHERE m.batch_id=? ORDER BY m.source_row", (batch,)).fetchall()
+
+
+def batch_rows(db,batch,states=(),page_size=500):
+    """Close each read page before any repair writes; never materialize all cards."""
+    last=(-1,-1)
+    while True:
+        condition=' AND j.state IN ('+','.join('?' for _ in states)+')' if states else ''
+        page=db.execute('''SELECT j.*,m.source_row AS _source_row FROM members m JOIN jobs j ON j.id=m.job_id
+          WHERE m.batch_id=? AND (m.source_row,m.job_id)>(?,?)'''+condition+
+          ' ORDER BY m.source_row,m.job_id LIMIT ?',(batch,*last,*states,page_size)).fetchall()
+        if not page:return
+        last=(page[-1]['_source_row'],page[-1]['id'])
+        yield from page
 
 
 def check_receipt(receipt, digest=None):
@@ -128,10 +148,31 @@ def retained_in_database(db, row):
         and saved['receipt_sha256'] == hashlib.sha256((row['receipt_json'] or '').encode()).hexdigest())
 
 
+def repair_external_photo(db,row):
+    """A lost external picture must not reset an intact saved board result."""
+    if row['state']!='verified' or not row['result_json']:return False
+    parsed=json.loads(row['result_json'])
+    if parsed.get('student_photo',{}).get('storage')!='files':return False
+    saved=db.execute('SELECT * FROM database_retention WHERE job_id=?',(row['id'],)).fetchone()
+    if (not saved or saved['result_sha256']!=hashlib.sha256(row['result_json'].encode()).hexdigest()
+        or saved['receipt_sha256']!=hashlib.sha256((row['receipt_json'] or '').encode()).hexdigest()):return False
+    if photo_retained(db,row['id'],parsed):return False
+    with db:
+        changed=db.execute("""INSERT INTO photo_recovery(job_id,state,updated_at) VALUES(?,'pending',?)
+          ON CONFLICT(job_id) DO UPDATE SET state='pending',retry_after=0,updated_at=excluded.updated_at
+          WHERE photo_recovery.state='complete'""",(row['id'],now())).rowcount
+        if changed:db.execute("INSERT INTO result_events(job_id,kind,at) VALUES(?,'photo_missing',?)",(row['id'],now()))
+    return True
+
+
 def photo_retained(db, job_id, parsed, verify=False):
     metadata = parsed.get('student_photo')
     if not metadata:
         return True
+    if metadata.get('storage')=='files':
+        from .media import read_asset
+        try:read_asset(db,job_id,metadata,verify=verify);return True
+        except (OSError,ValueError,KeyError):return False
     row = db.execute('SELECT sha256,length(payload) AS bytes' + (',payload' if verify else '') +
                      ' FROM student_photos WHERE job_id=?', (job_id,)).fetchone()
     return bool(row and row['sha256'] == metadata.get('sha256') and row['bytes'] == metadata.get('bytes')
@@ -189,12 +230,15 @@ def reparse_cached_results(db, batch, receipt_checker=None, seen=None):
     receipt_checker = receipt_checker or check_receipt
     # Pending imports can contain hundreds of thousands of rolls; only captured
     # responses can be reparsed. Stream those rows instead of materializing all.
-    rows = db.execute("SELECT j.* FROM members m JOIN jobs j ON j.id=m.job_id WHERE m.batch_id=? AND j.state IN ('verified','needs_review','failed') ORDER BY m.source_row", (batch,))
+    rows = batch_rows(db,batch,('verified','needs_review','failed'))
     for row in rows:
         if seen is not None:
             if row['id'] in seen:
                 continue
             seen.add(row['id'])
+        if repair_external_photo(db,row):
+            summary['already_current']+=1
+            continue
         receipt = json.loads(row["receipt_json"] or "{}")
         previous = json.loads(row["result_json"] or "{}")
         if retained_in_database(db, row):
@@ -254,9 +298,12 @@ def prepare_jobs(db, batch, retry_unresolved=False, digests=None):
     with db:
         db.execute("UPDATE jobs SET state='pending',error='Recovered interrupted claim',updated_at=? WHERE state='running'", (now(),))
         db.execute("UPDATE attempts SET ended_at=?,outcome='interrupted' WHERE ended_at IS NULL", (now(),))
-        for row in jobs_for(db, batch):
-            if row["state"] == "verified" and not retained_in_database(db,row) and not verifier(json.loads(row["receipt_json"] or "{}")):
+    for row in batch_rows(db,batch):
+        if repair_external_photo(db,row):continue
+        if row["state"] == "verified" and not retained_in_database(db,row) and not verifier(json.loads(row["receipt_json"] or "{}")):
+            with db:
                 db.execute("UPDATE jobs SET state='pending',error='Artifact missing or hash mismatch',updated_at=? WHERE id=?", (now(), row["id"]))
-            elif retry_unresolved and row["state"] in ("needs_review", "failed"):
+        elif retry_unresolved and row["state"] in ("needs_review", "failed"):
+            with db:
                 db.execute("UPDATE jobs SET state='pending',updated_at=? WHERE id=?", (now(), row["id"]))
-    return [dict(row) for row in jobs_for(db, batch) if row["state"] == "pending"]
+    return [dict(row) for row in batch_rows(db,batch,('pending',))]

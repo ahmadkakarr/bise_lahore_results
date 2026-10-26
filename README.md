@@ -263,6 +263,10 @@ The two inputs under `roll_number_slips/2026/9th` and `10th` are supported. Use 
 
 ## Fast stop and resume
 
+For the separate server-side **9th 2026 collector with original photos stored as
+files**, use the [SSC server operations guide](docs/SSC_SERVER_OPERATIONS.md).
+Its explicit remote profile keeps monitoring and state separate from Inter 2024.
+
 Ctrl-C does not trigger report generation. Each finished lookup is committed to SQLite during collection. Restart the same command to resume pending/unresolved work while saved records stay cached. DB-only retention preserves complete parsed data and unresolved evidence; a matching retention ledger prevents deliberately removed captures from triggering a refetch.
 
 For 9th normalization, read the database directly:
