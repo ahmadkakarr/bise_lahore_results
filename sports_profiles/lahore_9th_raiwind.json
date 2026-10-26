@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "scheme": "Lahore 9th Raiwind",
+  "campaign": "punjab-youthgames-2026",
+  "category": "Schools (Secondary)",
+  "version": "remaining-v1",
+  "seed": "lahore-raiwind-approved-sports-2026-v1",
+  "weights": {
+    "Female": {
+      "Badminton": 50,
+      "Athletics": 20,
+      "Cricket (Hard Ball)": 10,
+      "Football": 5,
+      "Tug of War": 15,
+      "Kabaddi (Boys Only)": 0
+    },
+    "Male": {
+      "Badminton": 10,
+      "Athletics": 15,
+      "Cricket (Hard Ball)": 40,
+      "Football": 25,
+      "Tug of War": 5,
+      "Kabaddi (Boys Only)": 5
+    }
+  }
+}

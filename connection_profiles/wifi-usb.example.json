@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "connections": [
+    {
+      "name": "wifi",
+      "interface": "wlan0",
+      "source_ip": null,
+      "expected_public_ip": null,
+      "dispatch_interval_seconds": 6
+    },
+    {
+      "name": "mobile",
+      "interface": "REPLACE_WITH_USB_INTERFACE",
+      "source_ip": null,
+      "expected_public_ip": null,
+      "dispatch_interval_seconds": 6
+    }
+  ]
+}

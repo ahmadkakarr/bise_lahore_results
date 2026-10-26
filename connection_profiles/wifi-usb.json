@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "connections": [
+    {
+      "name": "enp0s20f0u4",
+      "interface": "enp0s20f0u4",
+      "source_ip": null,
+      "expected_public_ip": "154.81.236.130",
+      "dispatch_interval_seconds": 6
+    },
+    {
+      "name": "wlan0",
+      "interface": "wlan0",
+      "source_ip": null,
+      "expected_public_ip": "139.135.39.65",
+      "dispatch_interval_seconds": 6
+    }
+  ]
+}

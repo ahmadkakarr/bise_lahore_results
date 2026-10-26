@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "stable_interface": "enp0s20f0u4",
+  "usb_vendor": "04e8",
+  "usb_serial": "R5GL32688SE",
+  "networkmanager_profile_uuid": "7a929a33-c9b0-51d7-9199-0bc73dd23682",
+  "route_table": 20040
+}

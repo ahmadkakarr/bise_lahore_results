@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "profile": "Lahore Private 9th Raiwind",
+  "campaign": "punjab-youthgames-2026",
+  "portal": "https://youthgames.punjab.gov.pk/#registration",
+  "input": {
+    "csv": "../normalized_output/Lahore Private 9th/Raiwind/Ready to Register.csv",
+    "manifest": "../normalized_output/Lahore Private 9th/Raiwind/Data/manifest.json",
+    "provenance": "../normalized_output/Lahore Private 9th/Raiwind/Data/ready-to-register-provenance.jsonl",
+    "expected_csv_sha256": "b8fa3a125edaf6231b8e10cfd36bebac684ce515517274c6c9f4fee12ad33a85"
+  },
+  "selection": {
+    "category": "Schools (Secondary)",
+    "subcategory": "Private",
+    "sport": [
+      "Athletics",
+      "Badminton",
+      "Cricket (Hard Ball)",
+      "Football",
+      "Kabaddi (Boys Only)",
+      "Tug of War"
+    ],
+    "rolls": []
+  },
+  "browser": {
+    "headless": false,
+    "workers": 18,
+    "fresh_context_per_applicant": false
+  },
+  "location_aliases": {
+    "UC No. 178, Manawan": {
+      "division": "Lahore",
+      "district": "Lahore",
+      "target_label": "UC No. 178, Manawan Ram Pur Jageer",
+      "observed_value": "2253"
+    }
+  },
+  "photos": {
+    "mode": "operator_selected_shared_graphic",
+    "shared_file": "../pictures/profile_pic.jpeg",
+    "expected_sha256": "3a048f35af39b41e40ad643ca31342803c1ee74e8262805e004f2d3f91501199",
+    "max_bytes": 262144,
+    "individual_overrides": null,
+    "site_acceptance_verified": false
+  },
+  "confirmation": {
+    "operator_reports_parent_student_consent": true,
+    "operator_confirmed_input_defaults": true,
+    "input_sha256": "b8fa3a125edaf6231b8e10cfd36bebac684ce515517274c6c9f4fee12ad33a85",
+    "fields": [
+      "Phone",
+      "Address",
+      "Gender",
+      "KitSize",
+      "JoggersSize",
+      "Category",
+      "SubCategory",
+      "Institute",
+      "Sport",
+      "Division",
+      "District",
+      "Tehsil",
+      "UC"
+    ],
+    "retain_original_provenance": true
+  },
+  "captcha": {
+    "mode": "auto",
+    "max_explicit_rejection_retries": 2
+  },
+  "pacing": {
+    "submission_interval_seconds": 5,
+    "honor_retry_after": true
+  },
+  "recovery": {
+    "retry_ambiguous_post": false,
+    "stop_on_uncertain": true
+  },
+  "state": {
+    "database": "../data/youthgames.sqlite3",
+    "output": "../normalized_output/registration_output/Lahore Private 9th Raiwind",
+    "write_reports": false
+  },
+  "inspection": {
+    "client_date": "2026-10-21",
+    "observed_secondary_dob_min": "2009-01-01",
+    "observed_secondary_dob_max": "2016-12-31",
+    "refresh_rules_before_submit": true,
+    "server_acceptance_verified": false
+  }
+}

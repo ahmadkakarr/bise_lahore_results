@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "batch": "Lahore Named Private 9th 2026 v1",
+  "year": 2026,
+  "category": "Schools (Secondary)",
+  "subcategory": "Private",
+  "division": "Lahore",
+  "district": "Lahore",
+  "campaign": "punjab-youthgames-2026",
+  "seed": "lahore-private-raiwind-model-town-approved-2026-v1",
+  "administrative_allocation_confirmed": true,
+  "selection_policy": "named-lahore-private-candidates-v1",
+  "groups": {
+    "raiwind": {
+      "scheme": "Lahore Private 9th Raiwind",
+      "tehsil": "Raiwind",
+      "maximum_records": 10000,
+      "uc_numbers": [255,256,257,258,259,260,261,262,263,264,265,266,267,268,269,270,271,272,273,274],
+      "allocation_profile": "lahore_private_9th_raiwind.json"
+    },
+    "model_town": {
+      "scheme": "Lahore Private 9th Model Town",
+      "tehsil": "Model Town",
+      "maximum_records": 15000,
+      "uc_numbers": [84,85,86,87,88,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241,255,256,257],
+      "allocation_profile": "lahore_private_9th_model_town.json"
+    }
+  },
+  "paths": {
+    "source_database": "../data/results.sqlite3",
+    "allocation_database": "../data/allocations.sqlite3",
+    "registration_database": "../data/youthgames.sqlite3",
+    "normalization_database": "../data/normalization.sqlite3",
+    "catalog": "../data/youthgames_catalog.json",
+    "normalization_base": "../normalization_profiles/9th_combined.json",
+    "registration_settings": "../registration_profiles/master.json",
+    "sports_policy": "../sports_profiles/lahore_9th_raiwind.json",
+    "normalization_profiles": "../normalization_profiles",
+    "output": "../normalized_output/Lahore Private 9th"
+  }
+}

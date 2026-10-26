@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "name": "pakistan_proxy",
+  "url": "http://103.4.95.90:8080",
+  "expected_public_ip": "103.4.95.90",
+  "dispatch_interval_seconds": 5
+}

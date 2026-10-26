@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "profile": "Lahore 9th Raiwind HTTP Pilot",
+  "campaign": "punjab-youthgames-2026",
+  "portal": "https://youthgames.punjab.gov.pk/#registration",
+  "input": {
+    "csv": "../data/registration_inputs/Lahore 9th Raiwind HTTP Pilot/Ready to Register.csv",
+    "provenance": "../data/registration_inputs/Lahore 9th Raiwind HTTP Pilot/Data/ready-to-register-provenance.jsonl",
+    "manifest": "../data/registration_inputs/Lahore 9th Raiwind HTTP Pilot/Data/manifest.json",
+    "expected_csv_sha256": "7230928aedbf4b8efa4b10cb9f35fc4e0499621796bfe9f126968e8caa80d482"
+  },
+  "selection": {
+    "category": "Schools (Secondary)",
+    "subcategory": "Open Category",
+    "sport": "Athletics",
+    "rolls": [
+      "400132",
+      "400141",
+      "400155",
+      "400162",
+      "408156",
+      "409840",
+      "410724",
+      "411531",
+      "411555",
+      "411557",
+      "411561",
+      "411590",
+      "411680",
+      "411694",
+      "411696",
+      "411704",
+      "411710",
+      "411711",
+      "411712",
+      "411727"
+    ]
+  },
+  "browser": {
+    "headless": false,
+    "workers": 1,
+    "fresh_context_per_applicant": false
+  },
+  "location_aliases": {
+    "UC No. 178, Manawan": {
+      "division": "Lahore",
+      "district": "Lahore",
+      "target_label": "UC No. 178, Manawan Ram Pur Jageer",
+      "observed_value": "2253"
+    }
+  },
+  "photos": {
+    "mode": "operator_selected_shared_graphic",
+    "shared_file": "../pictures/profile_pic.jpeg",
+    "expected_sha256": "3a048f35af39b41e40ad643ca31342803c1ee74e8262805e004f2d3f91501199",
+    "max_bytes": 262144,
+    "individual_overrides": null,
+    "site_acceptance_verified": false
+  },
+  "confirmation": {
+    "operator_reports_parent_student_consent": true,
+    "operator_confirmed_input_defaults": true,
+    "input_sha256": "7230928aedbf4b8efa4b10cb9f35fc4e0499621796bfe9f126968e8caa80d482",
+    "fields": [
+      "Phone",
+      "Address",
+      "Gender",
+      "KitSize",
+      "JoggersSize",
+      "Division",
+      "District",
+      "Tehsil",
+      "UC"
+    ],
+    "retain_original_provenance": true
+  },
+  "captcha": {
+    "mode": "auto",
+    "max_explicit_rejection_retries": 2
+  },
+  "pacing": {
+    "submission_interval_seconds": 5,
+    "honor_retry_after": true
+  },
+  "recovery": {
+    "retry_ambiguous_post": false,
+    "stop_on_uncertain": true
+  },
+  "state": {
+    "database": "../data/youthgames.sqlite3",
+    "output": "../registration_output/Lahore 9th Raiwind HTTP Pilot",
+    "write_reports": false
+  },
+  "inspection": {
+    "client_date": "2026-10-21",
+    "observed_secondary_dob_min": "2009-01-01",
+    "observed_secondary_dob_max": "2016-12-31",
+    "refresh_rules_before_submit": true,
+    "server_acceptance_verified": false
+  }
+}

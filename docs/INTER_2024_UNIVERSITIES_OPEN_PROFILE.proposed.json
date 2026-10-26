@@ -1,0 +1,174 @@
+{
+  "implementation_status": "planning_only_not_a_runnable_profile",
+  "proposed_schema_version": 2,
+  "batch": "Inter 2024 Universities Open",
+  "campaign": "punjab-youthgames-2026",
+  "source": {
+    "exam": {
+      "board": "BISE Lahore",
+      "year": 2024,
+      "course": "HSSC",
+      "part": "II",
+      "session": "Annual"
+    },
+    "database": "/var/lib/bise-results/workflows/inter-2024-universities-open-20261025/snapshots/Records Only.sqlite3",
+    "sha256": "831b37cbe131c273575d4d7b219293c1775d091fb14acb81983766421a42edc9",
+    "states": [
+      "verified"
+    ]
+  },
+  "participation": {
+    "Category": "Universities",
+    "SubCategory": "Open Category"
+  },
+  "locations": {
+    "Division": "Lahore",
+    "District": "Lahore",
+    "administrative_allocation": true,
+    "residence_inferred": false,
+    "targets": [
+      {
+        "Tehsil": "Raiwind",
+        "weight": 50,
+        "uc_numbers": [
+          255,
+          256,
+          257,
+          258,
+          259,
+          260,
+          261,
+          262,
+          263,
+          264,
+          265,
+          266,
+          267,
+          268,
+          269,
+          270,
+          271,
+          272,
+          273,
+          274
+        ]
+      },
+      {
+        "Tehsil": "Model Town",
+        "weight": 50,
+        "uc_numbers": [
+          84,
+          85,
+          86,
+          87,
+          88,
+          198,
+          199,
+          200,
+          201,
+          202,
+          203,
+          204,
+          205,
+          206,
+          207,
+          208,
+          209,
+          210,
+          211,
+          212,
+          213,
+          214,
+          215,
+          216,
+          217,
+          218,
+          219,
+          220,
+          221,
+          222,
+          223,
+          224,
+          225,
+          226,
+          227,
+          228,
+          229,
+          230,
+          231,
+          232,
+          233,
+          234,
+          235,
+          236,
+          237,
+          238,
+          239,
+          240,
+          241,
+          255,
+          256,
+          257
+        ]
+      }
+    ],
+    "portal_uc_requirement": "follow_selected_category_catalog"
+  },
+  "photos": {
+    "mode": "original_sqlite_reference",
+    "reference_table": "photo_references",
+    "original_database": "/var/lib/bise-results/jobs/inter-2024-part2-annual/results.sqlite3",
+    "maximum_bytes": 262144,
+    "allow_shared_fallback": false
+  },
+  "dob": {
+    "required_for_submission": "verified_individual",
+    "allow_estimate_as_dob": false,
+    "missing_status": "age_unknown"
+  },
+  "contact_defaults": {
+    "Phone": "03211234567",
+    "Address": "original_institution_or_district"
+  },
+  "sport_weights": {
+    "Female": {
+      "Badminton": 50,
+      "Athletics": 20,
+      "Cricket (Hard Ball)": 10,
+      "Football": 5,
+      "Tug of War": 15,
+      "Kabaddi (Boys Only)": 0
+    },
+    "Male": {
+      "Badminton": 10,
+      "Athletics": 15,
+      "Cricket (Hard Ball)": 40,
+      "Football": 25,
+      "Tug of War": 5,
+      "Kabaddi (Boys Only)": 5
+    }
+  },
+  "dispatch": {
+    "workers": 4,
+    "prepare_ahead": 2,
+    "in_flight": 2,
+    "pattern": [
+      "Raiwind",
+      "Model Town"
+    ],
+    "interval_seconds": 6,
+    "pacing_scope": "shared_server_connection",
+    "honor_retry_after": true,
+    "persist_next_turn": true
+  },
+  "duplicate_key": [
+    "portal",
+    "campaign",
+    "normalized_student_bform"
+  ],
+  "state_policy": {
+    "single_campaign_writer": "server",
+    "preserve_confirmed": true,
+    "normalization_rerun": "cache_by_source_and_policy_hash"
+  }
+}
